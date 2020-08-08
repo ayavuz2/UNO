@@ -1,5 +1,6 @@
 import pygame
 import os
+import sys
 import random
 pygame.font.init()
 
@@ -28,6 +29,7 @@ def create_deck(deck):
 
 	return_shuffled(COLOR_CARD_TYPES[:])
 	deck['black'] = BLACK_CARD_TYPES
+	# print(sys.getsizeof(deck))
 
 
 class Card():
@@ -49,7 +51,16 @@ class Player():
 		self.player_cards = []
 
 	def draw_a_card_from_deck(self, deck):
-		color = random.choice(list(deck.keys())) # add probability to the key=black
+		colors = list(deck.keys())
+		weights = []
+
+		for clr in colors:
+			weights.append(len(deck[clr]))
+
+		print(weights)
+		color = random.choices(colors, weights=weights, k=1) # k is the number of choosing
+		color = ''.join(color) # list to string
+
 		card = Card(color, deck[color].pop())
 		self.player_cards.append(card)
 
