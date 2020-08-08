@@ -4,7 +4,7 @@ import random
 pygame.font.init()
 
 
-WIDTH, HEIGHT = 600, 600
+WIDTH, HEIGHT = 800, 800
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("UNO")
 
@@ -34,14 +34,13 @@ class Card():
 	def __init__(self, color, card_type):
 		self.color = color
 		self.card_type = card_type
-		self.png = None
+		self.png = pygame.image.load(os.path.join("images", "{}_{}.png".format(self.color, self.card_type)))
 
 	def __eq__(self, other):
 		return self.color == other.color and self.card_type == other.card_type
 
-	def draw_card(self):
-		self.png = pygame.image.load(os.path.join("images", "{}_{}".format(self.color, self.card_type)))
-		# draw...
+	def draw_card(self, win, width, height, gap):		
+		win.blit(self.png, (gap, height-150))
 
 
 class Player():
@@ -49,12 +48,14 @@ class Player():
 		self.name = name
 		self.player_cards = []
 
-	def draw_a_card_from_deck(self, card):
+	def draw_a_card_from_deck(self, deck):
+		color = random.choice(list(deck.keys())) # add probability to the key=black
+		card = Card(color, deck[color].pop())
 		self.player_cards.append(card)
 
 	def set_initial_cards(self, deck):
 		for i in range(7):
-			self.player_cards.append()
+			self.draw_a_card_from_deck(deck) 
 
 	def is_finished(self):
 		return len(self.player_cards) == 0
@@ -62,14 +63,25 @@ class Player():
 	def is_playable(self, card_index, middle_card):
 		pass
 
+	def draw_players_cards(self, win, width, height):
+		gap = 10
+		for card in self.player_cards: # try [:] 
+			card.draw_card(win, width+0, height, gap)
+			gap += 80
 
-def draw(win):
+
+def get_click_pos(pos): # work in progress...
+	print(pos)
+
+def draw(win, width, height, player):
 	win.fill((255,255,255))
+
+	player.draw_players_cards(win, width, height)
 
 	pygame.display.update()
 
 
-def main():
+def main(win):
 	run = True
 	FPS = 15
 
@@ -77,16 +89,25 @@ def main():
 	clock = pygame.time.Clock()
 
 	create_deck(DECK)
-	# tmp = random.choice(list(DECK.keys()))
-	# print(tmp, (DECK[tmp].pop()))
+
+	player = Player('Tom')
+	player.set_initial_cards(DECK)
+	
+
+	# print("*********************")
+	# print(DECK)
 
 	while run:
 		clock.tick(FPS)
-		draw(WIN)
+		draw(win, WIDTH, HEIGHT, player)
 
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				quit()
 
+		if pygame.mouse.get_pressed()[0]:
+			pos = pygame.mouse.get_pos()
+			get_click_pos(pos)
 
-main()
+
+main(WIN)
