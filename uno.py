@@ -65,7 +65,7 @@ class Player():
 		self.player_cards.append(card)
 
 	def set_initial_cards(self, deck):
-		for i in range(9):
+		for i in range(12):
 			self.draw_a_card_from_deck(deck) 
 
 	def get_len(self):
@@ -84,16 +84,21 @@ class Player():
 			total_gap += (CARD_WIDTH + gap)
 
 
+def get_number_of_rows(number_of_cards, gap):
+	return (number_of_cards*CARD_WIDTH + (number_of_cards+1)*gap)//width + 1
+
 def get_click_pos(pos, width, height, gap, number_of_cards): # work in progress...
 	x, y = pos
-	number_of_rows = (number_of_cards*CARD_WIDTH + (number_of_cards+1)*gap)//width + 1
-
+	number_of_rows = get_number_of_rows(number_of_cards)
+	# max_horizontal_cards = 
+	
 	# checking if the cursor is in a specific area and also not on the gaps
-	if y>height-(number_of_rows*CARD_HEIGHT + (number_of_rows+1)*gap) and (height-y) % (CARD_HEIGHT+gap) >= gap:
-		row = (height-y)//(CARD_HEIGHT+gap)
+	area_height = number_of_rows*CARD_HEIGHT + (number_of_rows+1)*gap # height of the area
+	if y>height-area_height and (height-y) % (CARD_HEIGHT+gap) >= gap:
+		row = (area_height - (height-y))//(CARD_HEIGHT+gap)
 		if x % (CARD_WIDTH+gap) >= gap:
-			col = x//CARD_WIDTH
-			return row, col
+			col = x//(CARD_WIDTH+gap) 
+			return row, col # works fine but the render is not matching with the virtual row and col rn. Fix the render!
 
 	return None, None
 
@@ -121,7 +126,6 @@ def main(win, width, height):
 
 	while run:
 		clock.tick(FPS)
-		draw(win, width, height, player, GAP)
 
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -136,5 +140,6 @@ def main(win, width, height):
 		if pygame.mouse.get_pressed()[2]: # Changing card positions
 			pass 
 
+		draw(win, width, height, player, GAP)
 
 main(WIN, WIDTH, HEIGHT)
