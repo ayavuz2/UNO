@@ -40,10 +40,10 @@ class Card():
 		self.png = pygame.image.load(os.path.join("images", "{}_{}.png".format(self.color, self.card_type))) # green_.png
 
 	def __eq__(self, other):
-		return self.color == other.color or self.card_type == other.card_type or self.color == 'black'
+		return self.color == other.color or self.card_type == other.card_type or other.color == 'black'
 
 	def render_card(self, win, x, y, gap, change_row):		
-		win.blit(self.png, (x, y - (CARD_HEIGHT+gap)*change_row)) # update it with flexible heights
+		win.blit(self.png, (x, y - (CARD_HEIGHT+gap)*change_row))
 		# win.blit(self.png, (x%WIDTH, y-(CARD_HEIGHT+gap)))
 
 
@@ -57,7 +57,7 @@ class Mid(Card):
 		win.blit(self.png, (self.x, self.y))
 
 	def __eq__(self, other):
-		return self.color == other.color or self.card_type == other.card_type or self.color == 'black'
+		return self.color == other.color or self.card_type == other.card_type or other.color == 'black'
 
 
 class Player():
@@ -65,11 +65,21 @@ class Player():
 		self.name = name
 		self.player_cards = []
 
+	def move(self, width, row, col, middle_card, gap): # get card_index from row and col. Call is_playable(). If so pop that card and delete the object(card)
+		max_in_a_row = get_max_horizontal(width, gap)
+		card_index = row * max_in_a_row + (col+1)
+		# print(self.player_cards[card_index-1].color, self.player_cards[card_index-1].card_type)
+
+		if self.is_playable(card_index, middle_card):
+			pass
+		else:
+			print("That move is not allowed!")
+
 	def draw_a_card_from_deck(self, deck):		
 		self.player_cards.append(draw_a_card(deck))
 
 	def set_initial_cards(self, deck):
-		for i in range(15):
+		for i in range(7):
 			self.draw_a_card_from_deck(deck) 
 		'''for card in self.player_cards:
 			print(card.color, card.card_type, end='  ---   ')'''
@@ -81,7 +91,7 @@ class Player():
 		return len(self.player_cards) == 0
 
 	def is_playable(self, card_index, middle_card):
-		pass
+		return True if self.player_cards[card_index-1] == middle_card else False
 
 	def render_players_cards(self, win, width, height, gap): # it is kinda complex :)		
 		total_gap = gap
@@ -109,7 +119,7 @@ def draw_a_card(deck, is_mid=False):
 	color = random.choices(colors, weights=weights, k=1) # k is the number of choosing
 	color = ''.join(color) # list to string
 
-	card = Card(color, deck[color].pop()) if is_mid == False else Mid(color, deck[color].pop())
+	card = Card(color, deck[color].pop()) if not is_mid else Mid(color, deck[color].pop()) # Mid color shouldnt be black at the beginning
 
 	return card
 
@@ -174,6 +184,11 @@ def main(win, width, height):
 			# print(pos)
 			row, col = get_click_pos(pos, width, height, GAP, player.get_len())
 			print(row, col)
+			try:
+				if row != None:
+					player.move(width, row, col, MID_CARD[0], GAP)
+			except IndexError:
+				continue
 
 		if pygame.mouse.get_pressed()[2]: # Changing card positions
 			pass 
