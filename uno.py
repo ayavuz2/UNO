@@ -1,6 +1,6 @@
 import pygame
 import os
-# import sys
+from time import sleep
 import random
 pygame.font.init()
 
@@ -33,14 +33,11 @@ def create_deck(deck):
 	# print(sys.getsizeof(deck))
 
 
-class Card():
-	def __init__(self, color, card_type):
+class Card:
+	def __init__(self, color, card_type=''):
 		self.color = color
 		self.card_type = card_type
 		self.png = pygame.image.load(os.path.join("images", "{}_{}.png".format(self.color, self.card_type))) # green_.png
-
-	def __eq__(self, other):
-		return self.color == other.color or self.card_type == other.card_type or other.color == 'black'
 
 	def render_card(self, win, x, y, gap, change_row):		
 		win.blit(self.png, (x, y - (CARD_HEIGHT+gap)*change_row))
@@ -56,48 +53,58 @@ class Mid(Card):
 	def render_card(self, win):
 		win.blit(self.png, (self.x, self.y))
 
-	def __eq__(self, other):
-		return self.color == other.color or self.card_type == other.card_type or other.color == 'black'
 
-
-class Player():
+class Player:
 	def __init__(self, name):
 		self.name = name
 		self.player_cards = []
 
-	def move(self, width, row, col, middle_card, gap): # get card_index from row and col. Call is_playable(). If so pop that card and delete the object(card)
-		max_in_a_row = get_max_horizontal(width, gap)
-		card_index = row * max_in_a_row + (col+1)
-		# print(self.player_cards[card_index-1].color, self.player_cards[card_index-1].card_type)
+	def move(self, width, row, col, middle_card, gap, deck): # get card_index from row and col. Call is_playable(). If so pop that card and delete the object(card)
+		card_index = get_card_index(width, gap, row, col)
 
-		if self.is_playable(card_index, middle_card):
-			pass
+		if self.get_len() == card_index:
+			sleep(0.1)
+			self.draw_a_card_from_deck(deck)
+			tmp = self.player_cards.pop(-2)
+			self.player_cards.append(tmp)
+
+		elif self.is_playable(card_index, middle_card):
+			sleep(0.1) # trying to prevent the user's unintentional card choosings back to back
+			new_mid = self.player_cards.pop(card_index)
+			new_mid = Mid(new_mid.color, new_mid.card_type)		
+			return(new_mid)
+
 		else:
-			print("That move is not allowed!")
+			print("That move is not allowed!")	
 
 	def draw_a_card_from_deck(self, deck):		
 		self.player_cards.append(draw_a_card(deck))
 
 	def set_initial_cards(self, deck):
-		for i in range(7):
+		for i in range(15):
 			self.draw_a_card_from_deck(deck) 
-		'''for card in self.player_cards:
-			print(card.color, card.card_type, end='  ---   ')'''
+		draw_card_slot = Card('back')
+		self.player_cards.append(draw_card_slot)
 
 	def get_len(self):
-		return len(self.player_cards)
+		return len(self.player_cards) - 1 # draw_a_card slot is not actually a card so that is where -1 comes from
 
 	def is_finished(self):
 		return len(self.player_cards) == 0
 
 	def is_playable(self, card_index, middle_card):
-		return True if self.player_cards[card_index-1] == middle_card else False
+		tmp = self.player_cards[card_index]
+		if tmp.color == middle_card.color or tmp.card_type == middle_card.card_type or tmp.color == 'black':
+			return True
+		if tmp.card_type == '+2' and middle_card.card_type == '+4':
+			return True
+		return False
 
 	def render_players_cards(self, win, width, height, gap): # it is kinda complex :)		
 		total_gap = gap
 		row_change_point = get_max_horizontal(width, gap)
 		total_row = self.get_len()//row_change_point if self.get_len()%row_change_point == 0 else self.get_len()//row_change_point + 1  
-		check = 0
+		check = 0 # that complex looking row(previous one) is checking if the player_cards in last row is maxed or not
 
 		for card in self.player_cards: # try [:] 
 			if check == row_change_point:
@@ -133,6 +140,10 @@ def get_max_horizontal(width, gap):
 		max_horizontal_cards += 1
 	return max_horizontal_cards
 
+def get_card_index(width, gap, row, col):
+	max_in_a_row = get_max_horizontal(width, gap)
+	return((row * max_in_a_row + (col+1)) - 1)
+
 def get_click_pos(pos, width, height, gap, number_of_cards): # work in progress...
 	x, y = pos
 	number_of_rows = get_number_of_rows(width, gap, number_of_cards)
@@ -143,7 +154,7 @@ def get_click_pos(pos, width, height, gap, number_of_cards): # work in progress.
 		row = (area_height - (height-y))//(CARD_HEIGHT+gap)
 		if x % (CARD_WIDTH+gap) >= gap:
 			col = x//(CARD_WIDTH+gap) 
-			return row, col # works fine but the render is not matching with the virtual row and col rn. Fix the render!
+			return row, col
 
 	return None, None
 
@@ -181,12 +192,14 @@ def main(win, width, height):
 
 		if pygame.mouse.get_pressed()[0]:
 			pos = pygame.mouse.get_pos()
-			# print(pos)
+			
 			row, col = get_click_pos(pos, width, height, GAP, player.get_len())
-			print(row, col)
+			# print(row, col)
 			try:
 				if row != None:
-					player.move(width, row, col, MID_CARD[0], GAP)
+					tmp = player.move(width, row, col, MID_CARD[0], GAP, DECK)
+					if tmp != None:
+						MID_CARD[0] = tmp
 			except IndexError:
 				continue
 
