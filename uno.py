@@ -9,6 +9,8 @@ WIDTH, HEIGHT = 775, 800
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("UNO")
 
+FONT = pygame.font.SysFont("comicsans", 50)
+
 COLORS = ['red', 'yellow', 'green', 'blue']
 ALL_COLORS = COLORS + ['black']
 NUMBERS = list(range(10)) + list(range(1,10))
@@ -17,6 +19,7 @@ COLOR_CARD_TYPES = NUMBERS + SPECIAL_CARD_TYPES*2
 BLACK_CARD_TYPES = ['wildcard', '+4']*4
 CARD_TYPES = NUMBERS + SPECIAL_CARD_TYPES + BLACK_CARD_TYPES
 CARD_WIDTH, CARD_HEIGHT = 72, 108
+
 
 # Creating a deck
 def create_deck(deck):
@@ -138,11 +141,10 @@ def get_max_horizontal(width, gap):
 	max_horizontal_cards = 1
 	while ((gap+CARD_WIDTH)*max_horizontal_cards)//width < 1:
 		max_horizontal_cards += 1
-	return max_horizontal_cards - 1
+	return max_horizontal_cards - 1 
 
 def get_card_index(width, gap, row, col):
 	max_in_a_row = get_max_horizontal(width, gap)
-	# print(max_in_a_row)
 	return((row * max_in_a_row + (col+1)) - 1)
 
 def get_click_pos(pos, width, height, gap, number_of_cards):
@@ -159,12 +161,22 @@ def get_click_pos(pos, width, height, gap, number_of_cards):
 
 	return None, None
 
-def draw(win, width, height, player, gap, mid):
+def render_message(win, width, height, message):
+	message_label = FONT.render(message, 1, (255,0,0))
+
+	w, h = message_label.get_width(), message_label.get_height()
+	tmp = (width//2 + CARD_WIDTH*2 - 10, height//2 - h//2 -10, w+20, h+20)
+	pygame.draw.rect(win, (190,190,190), tmp)
+
+	win.blit(message_label, (width//2 + CARD_WIDTH*2, height//2 - message_label.get_height()//2))
+
+def draw(win, width, height, player, gap, mid, message='PASS'):
 	win.fill((255,255,255))
 
 	mid.render_card(win)
-
 	player.render_players_cards(win, width, height, gap)
+
+	render_message(win, width, height, message)
 
 	pygame.display.update()
 
@@ -181,6 +193,13 @@ def main(win, width, height):
 	MID_CARD.append(draw_a_card(DECK, True))
 	GAP = 5
 
+	'''
+	players = []
+	for name in ['Tom', 'Alex', 'Jason', 'Anders']:
+		player = Player(name)
+		player.set_initial_cards(DECK)
+		players.append(player)
+	'''
 	player = Player('Tom')
 	player.set_initial_cards(DECK)
 
@@ -195,7 +214,6 @@ def main(win, width, height):
 			pos = pygame.mouse.get_pos()
 			
 			row, col = get_click_pos(pos, width, height, GAP, player.get_len())
-			# print(row, col)
 			try:
 				if row != None:
 					tmp = player.move(width, row, col, MID_CARD[0], GAP, DECK)
