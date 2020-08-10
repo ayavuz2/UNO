@@ -37,11 +37,10 @@ class Card:
 	def __init__(self, color, card_type=''):
 		self.color = color
 		self.card_type = card_type
-		self.png = pygame.image.load(os.path.join("images", "{}_{}.png".format(self.color, self.card_type))) # green_.png
+		self.png = pygame.image.load(os.path.join("images", "{}_{}.png".format(self.color, self.card_type)))
 
 	def render_card(self, win, x, y, gap, change_row):		
 		win.blit(self.png, (x, y - (CARD_HEIGHT+gap)*change_row))
-		# win.blit(self.png, (x%WIDTH, y-(CARD_HEIGHT+gap)))
 
 
 class Mid(Card):
@@ -59,10 +58,10 @@ class Player:
 		self.name = name
 		self.player_cards = []
 
-	def move(self, width, row, col, middle_card, gap, deck): # get card_index from row and col. Call is_playable(). If so pop that card and delete the object(card)
+	def move(self, width, row, col, middle_card, gap, deck):
 		card_index = get_card_index(width, gap, row, col)
-
-		if self.get_len() == card_index:
+		
+		if self.get_len() == card_index+1: # draw_a_card slot
 			sleep(0.1)
 			self.draw_a_card_from_deck(deck)
 			tmp = self.player_cards.pop(-2)
@@ -81,38 +80,39 @@ class Player:
 		self.player_cards.append(draw_a_card(deck))
 
 	def set_initial_cards(self, deck):
-		for i in range(15):
+		for i in range(7):
 			self.draw_a_card_from_deck(deck) 
 		draw_card_slot = Card('back')
 		self.player_cards.append(draw_card_slot)
 
 	def get_len(self):
-		return len(self.player_cards) - 1 # draw_a_card slot is not actually a card so that is where -1 comes from
+		return len(self.player_cards)
 
 	def is_finished(self):
-		return len(self.player_cards) == 0
+		return len(self.player_cards) == 1 # draw_a_card slot is not actually a card so that is where 1 comes from
 
 	def is_playable(self, card_index, middle_card):
 		tmp = self.player_cards[card_index]
 		if tmp.color == middle_card.color or tmp.card_type == middle_card.card_type or tmp.color == 'black':
 			return True
-		if tmp.card_type == '+2' and middle_card.card_type == '+4':
+		if tmp.card_type == '+2' and middle_card.card_type == '+4': # +4 will make the user choose a color so this will be unnecessary
 			return True
 		return False
 
-	def render_players_cards(self, win, width, height, gap): # it is kinda complex :)		
+	def render_players_cards(self, win, width, height, gap):		
+		row_change_point = get_max_horizontal(width, gap) # Make a global var MAX_HORIZONTAL which will be calculated at the beginning
+		number_of_rows = get_number_of_rows(width, gap, self.get_len())
 		total_gap = gap
-		row_change_point = get_max_horizontal(width, gap)
-		total_row = self.get_len()//row_change_point if self.get_len()%row_change_point == 0 else self.get_len()//row_change_point + 1  
-		check = 0 # that complex looking row(previous one) is checking if the player_cards in last row is maxed or not
+		check = 1
 
-		for card in self.player_cards: # try [:] 
-			if check == row_change_point:
-				total_row -= 1
-				check = 0 
-				total_gap = gap
-			card.render_card(win, total_gap, height, gap, total_row) # make (x, y) flexible for render_card function
-			total_gap += (CARD_WIDTH + gap)
+		for i in range(number_of_rows, 0, -1):
+			total_gap = gap
+			while check % row_change_point != 0 and check-1 != self.get_len():
+				self.player_cards[check-1].render_card(win, total_gap, height, gap, i)
+				total_gap += (CARD_WIDTH + gap)
+				check += 1
+			if check-1 != self.get_len():
+				self.player_cards[check-1].render_card(win, total_gap, height, gap, i)
 			check += 1
 
 
@@ -138,13 +138,14 @@ def get_max_horizontal(width, gap):
 	max_horizontal_cards = 1
 	while ((gap+CARD_WIDTH)*max_horizontal_cards)//width < 1:
 		max_horizontal_cards += 1
-	return max_horizontal_cards
+	return max_horizontal_cards - 1
 
 def get_card_index(width, gap, row, col):
 	max_in_a_row = get_max_horizontal(width, gap)
+	# print(max_in_a_row)
 	return((row * max_in_a_row + (col+1)) - 1)
 
-def get_click_pos(pos, width, height, gap, number_of_cards): # work in progress...
+def get_click_pos(pos, width, height, gap, number_of_cards):
 	x, y = pos
 	number_of_rows = get_number_of_rows(width, gap, number_of_cards)
 	
