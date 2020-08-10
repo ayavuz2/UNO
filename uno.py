@@ -161,12 +161,18 @@ def get_click_pos(pos, width, height, gap, number_of_cards):
 
 	return None, None
 
-def render_message(win, width, height, message):
+def pass_button_area(width, height, message):
 	message_label = FONT.render(message, 1, (255,0,0))
 
 	w, h = message_label.get_width(), message_label.get_height()
-	tmp = (width//2 + CARD_WIDTH*2 - 10, height//2 - h//2 -10, w+20, h+20)
-	pygame.draw.rect(win, (190,190,190), tmp)
+	rect_area = (width//2 + CARD_WIDTH*2 - 10, height//2 - h//2 -10, w+20, h+20)
+
+	return rect_area
+
+def render_message(win, width, height, message):
+	message_label = FONT.render(message, 1, (255,0,0))
+
+	pygame.draw.rect(win, (190,190,190), pass_button_area(width, height, message))
 
 	win.blit(message_label, (width//2 + CARD_WIDTH*2, height//2 - message_label.get_height()//2))
 
@@ -192,6 +198,8 @@ def main(win, width, height):
 	MID_CARD = []
 	MID_CARD.append(draw_a_card(DECK, True))
 	GAP = 5
+	
+	pass_button = pass_button_area(width, height, "PASS")
 
 	'''
 	players = []
@@ -213,7 +221,9 @@ def main(win, width, height):
 		if pygame.mouse.get_pressed()[0]:
 			pos = pygame.mouse.get_pos()
 			
+
 			row, col = get_click_pos(pos, width, height, GAP, player.get_len())
+
 			try:
 				if row != None:
 					tmp = player.move(width, row, col, MID_CARD[0], GAP, DECK)
@@ -221,6 +231,10 @@ def main(win, width, height):
 						MID_CARD[0] = tmp
 			except IndexError:
 				continue
+
+			if pass_button[0] < pos[0] and pass_button[1] < pos[1] and pos[0] < pass_button[0]+pass_button[2] and pos[1] < pass_button[1]+pass_button[3]:
+				print(True)
+				sleep(0.1)
 
 		if pygame.mouse.get_pressed()[2]: # Changing card positions
 			pass 
