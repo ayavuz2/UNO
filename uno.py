@@ -16,7 +16,7 @@ ALL_COLORS = COLORS + ['black']
 NUMBERS = list(range(10)) + list(range(1,10))
 SPECIAL_CARD_TYPES = ['skip', 'reverse', '+2']
 COLOR_CARD_TYPES = NUMBERS + SPECIAL_CARD_TYPES*2
-BLACK_CARD_TYPES = ['wildcard', '+4']*4
+BLACK_CARD_TYPES = ['wildcard', '+4']
 CARD_TYPES = NUMBERS + SPECIAL_CARD_TYPES + BLACK_CARD_TYPES
 CARD_WIDTH, CARD_HEIGHT = 72, 108
 
@@ -32,8 +32,8 @@ def create_deck(deck):
 		deck[color] = return_shuffled(COLOR_CARD_TYPES[:])
 
 	return_shuffled(COLOR_CARD_TYPES[:])
-	deck['black'] = BLACK_CARD_TYPES
-	# print(sys.getsizeof(deck))
+	deck['black'] = BLACK_CARD_TYPES*4
+	print(deck)
 
 
 class Card:
@@ -45,18 +45,24 @@ class Card:
 	def render_card(self, win, x, y, gap, change_row):		
 		win.blit(self.png, (x, y - (CARD_HEIGHT+gap)*change_row))
 
-	def card_features(self):
-		if self.card_type == 'skip':
-			pass
+	def card_features(self, players, temp_stacked_cards):
+		tmp_stacked_cards = []
+		for tmp in stacked_cards[:]:
+			if tmp in SPECIAL_CARD_TYPES or tmp in BLACK_CARD_TYPES:
+				tmp_stacked_cards.append(tmp)
+		operation = ('', 0, False) # (operation, number_of_operation, change_color)
+		if tmp_stacked_cards[0].card_type == 'skip':
+			operation[0] = 'skip'
+			operation[1] += 1
 		elif self.card_type == 'reverse':
-			pass
-		elif self.card_type == '+2':
-			pass
+			operation[0] = 'reverse'
+			operation[1] += 1 
+		elif '+' in self.card_type:
+			for digit in self.card_type:
+				sum_of_stacks += digit[1]
+				return sum_of_stacks
 		elif self.card_type == 'wildcard':
 			pass
-		elif self.card_type == '+4':
-			pass
-
 
 class Mid(Card):
 	def __init__(self, color, card_type):
@@ -73,26 +79,31 @@ class Player:
 		self.name = name
 		self.player_cards = []
 		self.round_move_count = 0
+		self.stacked_cards = []
 
 	def move(self, card_index, middle_card, deck):
-		if self.round_move_count > 0:
-			new_mid = self.stacking(card_index, middle_card)
-			if new_mid != None:
-				return new_mid
-			print("That move is not allowed!")  
-		
-		elif self.get_len() == card_index+1: # draw_a_card slot
+		# draw_a_card
+		if self.get_len() == card_index+1: # draw_a_card slot
 			sleep(0.1)
 			self.draw_a_card_from_deck(deck)
 			tmp = self.player_cards.pop(-2)
 			self.player_cards.append(tmp)
 			self.round_move_count += 1
-
+		
+		# stacking
+		elif self.round_move_count > 0:
+			new_mid = self.stacking(card_index, middle_card)
+			if new_mid != None:
+				return new_mid
+			print("That move is not allowed!")  
+		
+		# top of the stack	
 		elif self.is_playable(card_index, middle_card):
 			sleep(0.1) # trying to prevent the user's unintentional card choosings back to back
 			new_mid = self.player_cards.pop(card_index)
 			new_mid = Mid(new_mid.color, new_mid.card_type)
 			self.round_move_count += 1
+			self.stacked_cards.append(new_mid)
 			return(new_mid)
 
 		else:
@@ -105,6 +116,7 @@ class Player:
 				new_mid = self.player_cards.pop(card_index)
 				new_mid = Mid(new_mid.color, new_mid.card_type)
 				self.round_move_count += 1
+				self.stacking.append(new_mid)
 				return(new_mid)			
 		except TypeError:
 			pass
@@ -163,6 +175,17 @@ def draw_a_card(deck, is_mid=False):
 
 	return card
 
+def implement_card_features(players, current_player_name, stacked_cards):
+	# features
+
+
+
+
+	# new_player_index
+	pass
+	new_player_index = [player.name for player in players].index(current_player_name)
+	print(new_player_index, players[new_player_index])
+	return players, new_player_index
 
 def get_number_of_rows(width, gap, number_of_cards):
 	return (number_of_cards*CARD_WIDTH + (number_of_cards+1)*gap)//width + 1
@@ -265,6 +288,9 @@ def main(win, width, height):
 
 			if pass_button[0] < pos[0] and pass_button[1] < pos[1] and pos[0] < pass_button[0]+pass_button[2] and pos[1] < pass_button[1]+pass_button[3]:
 				players[current_player].round_move_count = 0
+				players[current_player].stacking = []
+				players, current_player = implement_card_features(players, players[current_player].name)
+				
 				current_player += 1
 				sleep(0.1)
 
