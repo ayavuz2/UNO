@@ -45,6 +45,18 @@ class Card:
 	def render_card(self, win, x, y, gap, change_row):		
 		win.blit(self.png, (x, y - (CARD_HEIGHT+gap)*change_row))
 
+	def card_features(self):
+		if self.card_type == 'skip':
+			pass
+		elif self.card_type == 'reverse':
+			pass
+		elif self.card_type == '+2':
+			pass
+		elif self.card_type == 'wildcard':
+			pass
+		elif self.card_type == '+4':
+			pass
+
 
 class Mid(Card):
 	def __init__(self, color, card_type):
@@ -60,24 +72,42 @@ class Player:
 	def __init__(self, name):
 		self.name = name
 		self.player_cards = []
+		self.round_move_count = 0
 
-	def move(self, width, row, col, middle_card, gap, deck):
-		card_index = get_card_index(width, gap, row, col)
+	def move(self, card_index, middle_card, deck):
+		if self.round_move_count > 0:
+			new_mid = self.stacking(card_index, middle_card)
+			if new_mid != None:
+				return new_mid
+			print("That move is not allowed!")  
 		
-		if self.get_len() == card_index+1: # draw_a_card slot
+		elif self.get_len() == card_index+1: # draw_a_card slot
 			sleep(0.1)
 			self.draw_a_card_from_deck(deck)
 			tmp = self.player_cards.pop(-2)
 			self.player_cards.append(tmp)
+			self.round_move_count += 1
 
 		elif self.is_playable(card_index, middle_card):
 			sleep(0.1) # trying to prevent the user's unintentional card choosings back to back
 			new_mid = self.player_cards.pop(card_index)
-			new_mid = Mid(new_mid.color, new_mid.card_type)		
+			new_mid = Mid(new_mid.color, new_mid.card_type)
+			self.round_move_count += 1
 			return(new_mid)
 
 		else:
-			print("That move is not allowed!")	
+			print("That move is not allowed!")
+
+	def stacking(self, card_index, middle_card):
+		card = self.player_cards[card_index]
+		try:
+			if card.card_type == middle_card.card_type or ('+' in card.card_type and '+' in middle_card.card_type):
+				new_mid = self.player_cards.pop(card_index)
+				new_mid = Mid(new_mid.color, new_mid.card_type)
+				self.round_move_count += 1
+				return(new_mid)			
+		except TypeError:
+			pass
 
 	def draw_a_card_from_deck(self, deck):		
 		self.player_cards.append(draw_a_card(deck))
@@ -143,9 +173,10 @@ def get_max_horizontal(width, gap):
 		max_horizontal_cards += 1
 	return max_horizontal_cards - 1 
 
-def get_card_index(width, gap, row, col):
+def get_card_index(width, row, col, gap):
 	max_in_a_row = get_max_horizontal(width, gap)
-	return((row * max_in_a_row + (col+1)) - 1)
+	return(row * max_in_a_row + col)
+	# return((row * max_in_a_row + (col+1)) - 1)
 
 def get_click_pos(pos, width, height, gap, number_of_cards):
 	x, y = pos
@@ -156,7 +187,7 @@ def get_click_pos(pos, width, height, gap, number_of_cards):
 	if y>height-area_height and (height-y) % (CARD_HEIGHT+gap) >= gap:
 		row = (area_height - (height-y))//(CARD_HEIGHT+gap)
 		if x % (CARD_WIDTH+gap) >= gap:
-			col = x//(CARD_WIDTH+gap) 
+			col = x//(CARD_WIDTH+gap)
 			return row, col
 
 	return None, None
@@ -169,11 +200,12 @@ def pass_button_area(width, height, message):
 
 	return rect_area
 
-def render_message(win, width, height, message):
-	message_label = FONT.render(message, 1, (255,0,0))
+def render_message(win, width, height, message, player):
+	player_name_label = FONT.render(player.name+"'s turn.", 1, (255,0,0))
+	win.blit(player_name_label, (width//2 - player_name_label.get_width()//2, player_name_label.get_height()+10))
 
+	message_label = FONT.render('PASS', 1, (255,0,0))
 	pygame.draw.rect(win, (190,190,190), pass_button_area(width, height, message))
-
 	win.blit(message_label, (width//2 + CARD_WIDTH*2, height//2 - message_label.get_height()//2))
 
 def draw(win, width, height, player, gap, mid, message='PASS'):
@@ -182,7 +214,7 @@ def draw(win, width, height, player, gap, mid, message='PASS'):
 	mid.render_card(win)
 	player.render_players_cards(win, width, height, gap)
 
-	render_message(win, width, height, message)
+	render_message(win, width, height, message, player)
 
 	pygame.display.update()
 
@@ -201,15 +233,12 @@ def main(win, width, height):
 	
 	pass_button = pass_button_area(width, height, "PASS")
 
-	'''
 	players = []
+	current_player = 0
 	for name in ['Tom', 'Alex', 'Jason', 'Anders']:
 		player = Player(name)
 		player.set_initial_cards(DECK)
 		players.append(player)
-	'''
-	player = Player('Tom')
-	player.set_initial_cards(DECK)
 
 	while run:
 		clock.tick(FPS)
@@ -218,22 +247,25 @@ def main(win, width, height):
 			if event.type == pygame.QUIT:
 				quit()
 
+		player = players[current_player%(len(players))]
+
 		if pygame.mouse.get_pressed()[0]:
 			pos = pygame.mouse.get_pos()
-			
 
 			row, col = get_click_pos(pos, width, height, GAP, player.get_len())
 
 			try:
 				if row != None:
-					tmp = player.move(width, row, col, MID_CARD[0], GAP, DECK)
+					card_index = get_card_index(width, row, col, GAP)
+					tmp = player.move(card_index, MID_CARD[0], DECK)
 					if tmp != None:
 						MID_CARD[0] = tmp
 			except IndexError:
 				continue
 
 			if pass_button[0] < pos[0] and pass_button[1] < pos[1] and pos[0] < pass_button[0]+pass_button[2] and pos[1] < pass_button[1]+pass_button[3]:
-				print(True)
+				players[current_player].round_move_count = 0
+				current_player += 1
 				sleep(0.1)
 
 		if pygame.mouse.get_pressed()[2]: # Changing card positions
