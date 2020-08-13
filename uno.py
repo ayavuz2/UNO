@@ -43,24 +43,7 @@ class Card:
 
 	def render_card(self, win, x, y, gap, change_row):		
 		win.blit(self.png, (x, y - (CARD_HEIGHT+gap)*change_row))
-'''
-	def card_features(self, players, temp_stacked_cards):
-		# (operation, number_of_operation, change_color)
-		if tmp_stacked_cards[0].card_type == 'skip':
-			return (('skip', len(tmp_stacked_cards), False))
-
-		elif tmp_stacked_cards[0].card_type == 'reverse':
-			return (('reverse', len(tmp_stacked_cards), False))
-
-		elif '+' in tmp_stacked_cards[0].card_type:
-			sum_of_stacks = 0
-			for digit in tmp_stacked_cards:
-				sum_of_stacks += digit[1]
-			return (('+', sum_of_stacks, True)) if tmp_stacked_cards[-1].card_type == '+4' else (('+', sum_of_stacks, False))
-
-		elif tmp_stacked_cards[0] == 'wildcard':
-			return (('wildcard', 1, True))
-'''
+		
 
 class Mid(Card):
 	def __init__(self, color, card_type):
@@ -82,11 +65,11 @@ class Player:
 	def move(self, card_index, middle_card, deck):
 		mdl_card = middle_card
 		# draw_a_card
+		print(card_index)
 		if self.get_len() == card_index+1: # draw_a_card slot
 			sleep(0.1)
 			self.draw_a_card_from_deck(deck)
-			tmp = self.player_cards.pop(-2) # poping of the draw_card
-			self.player_cards.append(tmp) # appending the draw_card end of the list
+			self.adjust_draw_card_slot()
 			self.round_move_count += 1
 		
 		# stacking
@@ -128,6 +111,14 @@ class Player:
 			self.draw_a_card_from_deck(deck) 
 		draw_card_slot = Card('back')
 		self.player_cards.append(draw_card_slot)
+
+	def adjust_draw_card_slot(self):
+		for card in self.player_cards:
+			if card.color == 'back':
+				index = self.player_cards.index(card)
+				tmp = self.player_cards.pop(index) # poping of the draw_card
+				self.player_cards.append(tmp) # appending the draw_card end of the listb
+				break
 
 	def get_len(self):
 		return len(self.player_cards)
@@ -178,7 +169,7 @@ def draw_a_card(deck, is_mid=False):
 def implement_card_features(players, current_player_name, stacked_cards, middle_card):
 	# features
 	tmp_stacked_cards = []
-	for tmp in stacked_cards[:]:
+	for tmp in stacked_cards:
 		if((tmp.card_type in SPECIAL_CARD_TYPES) or (tmp.card_type in BLACK_CARD_TYPES)):
 			tmp_stacked_cards.append(tmp)
 	
@@ -197,7 +188,7 @@ def implement_card_features(players, current_player_name, stacked_cards, middle_
 			players[current_player_index].stacked_cards = []
 			new_player_index = current_player_index + total_skip # when the player presses pass button player_index will automaticly inrease 1
 			print(new_player_index)
-			return new_player_index
+			return new_player_index, 0
 
 		elif tmp_stacked_cards[0].card_type == 'reverse': # works fine
 			number_of_operation = len(tmp_stacked_cards) % 2 
@@ -205,20 +196,21 @@ def implement_card_features(players, current_player_name, stacked_cards, middle_
 				players.reverse() 
 			new_player_index = [player.name for player in players].index(current_player_name)
 			print(new_player_index)
-			return new_player_index # when the player pass button player_index will automaticly inrease 1
+			return new_player_index, 0 # when the player pass button player_index will automaticly inrease 1
 
 		elif '+' in tmp_stacked_cards[0].card_type: # NOT DONE YET!!!
+			new_player_index = current_player_index
 			sum_of_stacks = 0
 			for digit in tmp_stacked_cards:
-				sum_of_stacks += digit[1]
-			return (('+', sum_of_stacks, True)) if tmp_stacked_cards[-1].card_type == '+4' else (('+', sum_of_stacks, False))
+				sum_of_stacks += int(digit.card_type[1])
+			return new_player_index, sum_of_stacks
 
 		elif tmp_stacked_cards[0].card_type == 'wildcard': # Its not working like this. Fix it!
 			new_color = input("Which color you want to continue with: ")
 			new_middle_card = Card(new_color, '') # get middle_card list as parameter to make this possible to change the real mid_card
 			middle_card = new_middle_card
 
-	return current_player_index
+	return current_player_index, 0
 
 
 def get_number_of_rows(width, gap, number_of_cards):
@@ -289,6 +281,8 @@ def main(win, width, height):
 	GAP = 5
 	
 	pass_button = pass_button_area(width, height, "PASS")
+	number_of_cards_will_be_drawn = 0
+	message = 'PASS'
 
 	players = []
 	current_player_index = 0
@@ -324,8 +318,23 @@ def main(win, width, height):
 				continue
 
 			if pass_button[0] < pos[0] and pass_button[1] < pos[1] and pos[0] < pass_button[0]+pass_button[2] and pos[1] < pass_button[1]+pass_button[3]:
-				new_player_index = implement_card_features(players, players[current_player_index].name, players[current_player_index].stacked_cards, MID_CARD[0])
+				new_player_index, number_of_pluses = implement_card_features(players, players[current_player_index].name, players[current_player_index].stacked_cards[:], MID_CARD[0])
 				
+				if number_of_pluses > 0:
+					number_of_cards_will_be_drawn += number_of_pluses
+					number_of_pluses = 0
+					message = 'DRAW ' + str(number_of_cards_will_be_drawn)
+
+				elif number_of_cards_will_be_drawn != 0: # add (... and number_of_cards_will_be_drawn != ?NoneType?)
+					for card in range(number_of_cards_will_be_drawn):
+						players[current_player_index].draw_a_card_from_deck(DECK)
+					# add timer to make player to see his new cards
+					players[current_player_index].adjust_draw_card_slot()
+					number_of_cards_will_be_drawn = 0
+					message = 'PASS'
+					sleep(0.1)
+					continue
+
 				players[current_player_index].round_move_count = 0
 				players[current_player_index].stacked_cards = []
 				
@@ -339,6 +348,6 @@ def main(win, width, height):
 		if pygame.mouse.get_pressed()[2]: # Changing card positions
 			pass 
 
-		draw(win, width, height, player, GAP, MID_CARD[0])
+		draw(win, width, height, player, GAP, MID_CARD[0], message)
 
 main(WIN, WIDTH, HEIGHT)
