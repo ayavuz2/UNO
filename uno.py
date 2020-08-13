@@ -66,7 +66,7 @@ class Player:
 		mdl_card = middle_card
 		# draw_a_card
 		print(card_index)
-		if self.get_len() == card_index+1: # draw_a_card slot
+		if self.get_len() == card_index+1 and self.round_move_count == 0: # draw_a_card slot
 			sleep(0.1)
 			self.draw_a_card_from_deck(deck)
 			self.adjust_draw_card_slot()
